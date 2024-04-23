@@ -1,14 +1,14 @@
-# some unnecesary workaround for this error I'm getting - https://stackoverflow.com/questions/53014306/error-15-initializing-libiomp5-dylib-but-found-libiomp5-dylib-already-initial
-import os
-from typing import Union
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
-# main script
+from openai import OpenAI
 import numpy as np
+from typing import Union
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from dotenv import load_dotenv
 
+load_dotenv()
 model = SentenceTransformer("avsolatorio/GIST-small-Embedding-v0")
+client = OpenAI()
+
 
 intent = "I want to contact Mike"
 actions_for_statistics = [
@@ -110,6 +110,8 @@ actions_for_statistics = [
     "Notify Mike through a fitness app that you'll discuss dinner at the gym",
     "Alert Mike via a smart home intercom about the dinner"
 ]
+# note, the last two options could be used for contacting Mike.
+# The intent is ambigious, thus we don't knwo which one the user would prefer
 actions = [
     "Open a new document in Microsoft Word",
     "Browse the latest news on a news website",
@@ -119,8 +121,8 @@ actions = [
     "Play a song on a music streaming platform",
     "Calculate monthly expenses using a spreadsheet",
     "Book a flight ticket for an upcoming trip",
-    "Send an email",
-    "Send a message"
+    "Send an email",  # this one is relevant
+    "Send a message"  # this one is relevant
 ]
 
 def get_norm_statistics(actions: list[str]) -> Union[list[float], list[float]]:
@@ -131,12 +133,12 @@ def get_norm_statistics(actions: list[str]) -> Union[list[float], list[float]]:
     print(f'mean shape: {mean.shape}; std dev shape: {std_dev.shape}')
     return mean, std_dev
 
+
 def get_similarity_scores(intent: str, actions: list[str], mean: list[float]=0, std_dev: list[float]=1) -> list[float]:
     ' evaluate similarity of intent to different options in the actions list '
     intent_embedding = (model.encode([intent]) - mean) / std_dev
     actions_embedding = (model.encode(actions) - mean) / std_dev
     similarity_scores = cosine_similarity(intent_embedding, actions_embedding)
-    print(similarity_scores)
     return similarity_scores
 
 
@@ -145,15 +147,33 @@ def normalise_scores(scores: list[int]) -> list[int]:
     Note however that this is not a calibrated probability distribution as the system wasn't explicitly design/trained to do so. '''
     logits_exp = np.exp(scores - np.max(scores))
     scores = logits_exp / np.sum(logits_exp)
-    return scores
+    return scores[0]
+
+
+def plot_distributions_over_actions():
+    # TODO
+    return 
+
+
+def get_question(intent, actions, scores):
+    actions_and_scores = '\n'.join([f"{i}) probability: {scores[i]}, action: {actions[i]}" for i in range(len(actions))])
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+                {"role": "system", "content": "Your job is to generate a clarifying question which will disambiguate mapping from users intent or query onto a set of actions. You will be provided with the intent, set of actions, and associated probabuility scores of how well each action matches the intent. The goal is to create such claryfing question, answer to which would minimise the entropy of the provided probability distribution of the set of actions with the ultimate goal of identyfing a single action that matches the intent."},
+                {"role": "user", "content":f"User's intent: {intent}\n" +
+                 f"{actions_and_scores}\n" +
+                 f"Given the above actiosn and associated probabilities, what claryfing question to the author of the intent will help minimise the entropy by the biggest amount?"}
+            ]
+    )
+    return response.choices[0].message.content
 
 
 if "__main__" == __name__:
     mean, std_dev = get_norm_statistics(actions_for_statistics)
     scores = get_similarity_scores(intent, actions, mean, std_dev)
     normalised_scores = normalise_scores(scores)
-    print(normalised_scores)
-    # plot
-    # 
+    question = get_question(intent, actions, normalised_scores)
+    print(f'Question: {question}')
 
 

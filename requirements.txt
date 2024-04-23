@@ -1,0 +1,5 @@
+numpy==1.26.4
+openai==1.23.3
+python-dotenv==1.0.1
+scikit-learn==1.4.2
+sentence-transformers==2.7.0
