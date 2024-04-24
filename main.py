@@ -1,9 +1,11 @@
+import logging
 from openai import OpenAI
 import numpy as np
 from typing import Union
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
+
 
 load_dotenv()
 model = SentenceTransformer("avsolatorio/GIST-small-Embedding-v0")
@@ -130,8 +132,18 @@ def get_norm_statistics(actions: list[str]) -> Union[list[float], list[float]]:
     actions_embedding = model.encode(actions)
     mean = np.mean(actions_embedding, axis=0)
     std_dev = np.std(actions_embedding, axis=0)
-    print(f'mean shape: {mean.shape}; std dev shape: {std_dev.shape}')
     return mean, std_dev
+
+def configure_logging(debug_mode: bool):
+    logger = logging.getLogger()
+    # Set to CRITICAL to effectively disable logging when not in debug mode
+    logger.setLevel(logging.DEBUG if debug_mode else logging.CRITICAL)
+
+    if debug_mode:
+        file_handler = logging.FileHandler('app_debug.log')
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        logger.addHandler(file_handler)
 
 
 def get_similarity_scores(intent: str, actions: list[str], mean: list[float]=0, std_dev: list[float]=1) -> list[float]:
@@ -147,6 +159,7 @@ def normalise_scores(scores: list[int]) -> list[int]:
     Note however that this is not a calibrated probability distribution as the system wasn't explicitly design/trained to do so. '''
     logits_exp = np.exp(scores - np.max(scores))
     scores = logits_exp / np.sum(logits_exp)
+    logging.debug(f"Probabilities: {scores[0]}")
     return scores[0]
 
 
@@ -157,23 +170,82 @@ def plot_distributions_over_actions():
 
 def get_question(intent, actions, scores):
     actions_and_scores = '\n'.join([f"{i}) probability: {scores[i]}, action: {actions[i]}" for i in range(len(actions))])
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
+    messages=[
                 {"role": "system", "content": "Your job is to generate a clarifying question which will disambiguate mapping from users intent or query onto a set of actions. You will be provided with the intent, set of actions, and associated probabuility scores of how well each action matches the intent. The goal is to create such claryfing question, answer to which would minimise the entropy of the provided probability distribution of the set of actions with the ultimate goal of identyfing a single action that matches the intent."},
                 {"role": "user", "content":f"User's intent: {intent}\n" +
                  f"{actions_and_scores}\n" +
-                 f"Given the above actiosn and associated probabilities, what claryfing question to the author of the intent will help minimise the entropy by the biggest amount?"}
+                 f"Given the above user's intent and actions with associated probabilities, what claryfing question to the author of the intent will help minimise the entropy over the actions the system coudl take by the biggest amount? Remember hyou are trying to disambiguate the mapping from intent to a single action. Output just the question:"}
             ]
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages
     )
-    return response.choices[0].message.content
+    output = response.choices[0].message.content
+    logging.debug(f"\nget_question prompt:\n {messages}\n Response: {output}\n ")
+    return output
+
+
+def entropy_threshold_eval(intent, actions, scores):
+    ''' Temorary we use LLM to determine the level of ambiguity in the mapping intent -> action. 
+    Ideally there should be some entropy eval system that uses the computed probabilities without having to call LLM. '''
+    actions_and_scores = '\n'.join([f"{i}) probability: {scores[i]}, action: {actions[i]}" for i in range(len(actions))])
+    messages=[
+                {"role": "system", "content": "Your job is to evaluate whether the mapping from users query/intent to a set of actions is ambigious and needs further clarfyfication OR if there is a clear winner in terms of which action user want to perform from the set of options. You will be provided with the intent, set of actions, and associated probabuility scores of how well each action matches the intent. If you believe the entropy of this probability distribution is low enough then we don;t need anymore claryfication, if the entropy is high then we do."},
+                {"role": "user", "content":f"User's intent: {intent}\n" +
+                 f"{actions_and_scores}\n" +
+                 f"Given the above user's intent and actions with associated probabilities. Is the entropy low enough to select the right action with high confidence, if yes answer TRUE or otherwise if there is still an ambiguity and more clarity is needed answer FALSE.\n Answer only TRUE or FALSE, nothing else:"}
+            ]
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=messages
+    )
+    output = response.choices[0].message.content
+    logging.debug(f"\entropy_threshold_eval prompt:\n {messages}\n Response: {output}\n ")
+    print('Was action identified?: ', output)
+    stop_chain = False
+    if "true" in output.lower():
+        stop_chain = True
+    return stop_chain
 
 
 if "__main__" == __name__:
+    debug = False
+    configure_logging(debug)
+
     mean, std_dev = get_norm_statistics(actions_for_statistics)
     scores = get_similarity_scores(intent, actions, mean, std_dev)
     normalised_scores = normalise_scores(scores)
-    question = get_question(intent, actions, normalised_scores)
-    print(f'Question: {question}')
+    stop_chain = entropy_threshold_eval(intent, actions, normalised_scores)
+    print(f'intent: {intent}')
+    print(f'normalised_scores: {normalised_scores}\n')
+
+
+    while not stop_chain:
+        # 1) select the right claryfing question and obtain users answer
+        question = get_question(intent, actions, normalised_scores)
+        print(f'\nQuestion: {question}')
+        answer = input("Your answer: ")
+        if "exit" in answer.lower():
+            break
+
+        # 2) transform original users intent
+        
+
+        # 2) determine level of ambiguity 
+        intent = f"{intent}\nQuestion: {question}\nAnswer: {answer}"
+        print(f'intent: {intent}')
+        scores = get_similarity_scores(intent, actions, mean, std_dev)
+        normalised_scores = normalise_scores(scores)
+        print(f'normalised_scores: {normalised_scores}\n')
+
+        # 3) determine if more claryfing questions are needed
+        stop_chain = entropy_threshold_eval(intent, actions, normalised_scores)
+    
+    action_index = np.argmax(normalised_scores)
+    print(f"\nAction to perform: {actions[action_index]}")
+
+
+
+
 
 
