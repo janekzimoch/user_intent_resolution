@@ -217,7 +217,7 @@ def transform_users_intent(intent, question, answer):
                 Here is the follow up question you asked: {question}
                 Here is my answer: {answer}
 
-                Can you integrate my answer into my original request which would make the claryfing question redundant?
+                Can you integrate my answer into my original request which would make the claryfing question unnecesary?
                 Output just the modified original request. New original request:"""}
             ]
     response = client.chat.completions.create(

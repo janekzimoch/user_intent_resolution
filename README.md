@@ -1,5 +1,7 @@
 # User Intent resolution via maximal entropy minimisation
 
+Note: Current implementation in the `main.py` involves the simples solution to each module below i could think of. The solution i envisioned consists of more complex modules and I will be updating them itteratively.
+
 ## Objective
 
 Given a prompt to an AI agent, "Can you contact Mike?" the action the agent should take—"contact via email" or "contact via WhatsApp"—is unclear. Such a user prompt contains an insufficient amount of information to allow system to discriminate between these two actions, resulting in ambiguity. To achieve a high level of accuracy, the machine needs to seek additional information before making a decision. Asking the user for clarification is a clear and often the best way to reduce this uncertainty. The figure below provides a general schematic of how this can be achieved. It takes the form of a clarification loop, where the performance objective is to disambiguate the mapping from user intent to a single action in as few loop iterations as possible (following the belief that fewer steps mean a lower cognitive load and thus a better user experience).
@@ -19,9 +21,30 @@ Assumptions:
 - we assume thatthere is a finite set of N actions the system can perform.
 - there is at least one action that satisfies user's intent.
 
+## 2. Is the intent -> action mapping clear?
+
+descriptiuon to be added
+
+## 4. Update user prompt
+
+This is best done with a simple LLM prompt
+
+```
+Here is my original request: {intent}
+Here is the follow up question you asked: {question}
+Here is my answer: {answer}
+
+Can you integrate my answer into my original request which would make the claryfing question unnecesary?
+Output just the modified original request. New original request:
+```
+
+## 3. Claryfing question
+
+descriptiuon to be added
+
 ## Example
 
-##### Users intent and set of actions
+#### Users intent and set of actions
 
 ```
 intent = "I want to contact Mike"
@@ -34,20 +57,20 @@ actions = [
 ]
 ```
 
-##### 1. Generate probability dsitribution
+#### 1. Generate probability dsitribution
 
 Only "send an email" and "send a message" are plausible, around 50% each. All other options are not fulfiling the request.
 
-##### 2. Is intent -> action mapping clear?
+#### 2. Is the intent -> action mapping clear?
 
 No.
 
-##### 3. Claryfing question
+#### 3. Claryfing question
 
 System: "Do yuou want to contact Mike via email or message?"
 Answer: "email"
 
-##### 4. Update user prompt
+#### 4. Update user prompt
 
 Old prompt: "I want to contact Mike"
 New prompt: "I want to contact Mike via email"
