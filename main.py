@@ -114,7 +114,7 @@ actions_for_statistics = [
     "Alert Mike via a smart home intercom about the dinner"
 ]
 # note, the last two options could be used for contacting Mike.
-# The intent is ambigious, thus we don't knwo which one the user would prefer
+# The intent is ambigious, thus we don't know which one the user would prefer
 actions = [
     "Open a new document in Microsoft Word",
     "Browse the latest news on a news website",
@@ -253,12 +253,12 @@ if "__main__" == __name__:
         intent = transform_users_intent(intent, question, answer)
         print(f'New intent: {intent}')
 
-        # 2) determine level of ambiguity 
+        # 3) determine level of ambiguity 
         scores = get_similarity_scores(intent, actions, mean, std_dev)
         normalised_scores = normalise_scores(scores)
         print(f'normalised_scores: {normalised_scores}\n')
 
-        # 3) determine if more claryfing questions are needed
+        # 4) determine if more claryfing questions are needed
         stop_chain = entropy_threshold_eval(intent, actions, normalised_scores)
     
     action_index = np.argmax(normalised_scores)
