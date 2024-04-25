@@ -12,7 +12,7 @@ In the following sections, we will introduce and explore ideas on how each of th
 
 Number of actions `N` is unknown aprioriy for a general system. Thus a solution needs to be able to accomodate varying `N`number (a simple classification over N actions with calibrated logits deosn't satisfy this requirement). A potential solution could involve a contrastive learning (or metric learning) between `intent` and `action` where the labels are generated in a binary fashion `can this intent be fulfiled with a given action?`. In principle, the more suitable the action, the smaller the cosine distance between its embedding and that of the user's prompt. Out of the shelf embedding models, trained to generate semantic latent representation of language, can be used as well, however this will be limited by the amount of noise introduced by semantic similarities between words and sentences, which is not equivalent to the original question `can this action fulfil user's request?`. Contrastive learning where we evaluate score for one action at a time has also the limitation that it misses out on the information of the context of other avialbale actions in the set - we believe this will only have a minor effect.
 
-![schematic of probability distribtuion over N actions](./images/schematic_of_system_structure.png)
+![schematic of probability distribtuion over N actions](./images/schematic_probability_distribution_over_N_actions.png)
 
 Assumptions:
 
