@@ -45,7 +45,7 @@ Answer: "email"
 
 ##### 4. Update user prompt
 
-Old prompt: "I want to contact Mike"
+Old prompt: "I want to contact Mike" \\
 New prompt: "I want to contact Mike via email"
 
 ##### End
