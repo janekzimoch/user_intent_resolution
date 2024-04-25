@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 model = SentenceTransformer("avsolatorio/GIST-small-Embedding-v0")
 client = OpenAI()
+openai_model = 'gpt-3.5-turbo-0125'  # 'gpt-4-turbo-2024-04-09' #
 
 
 intent = "I want to contact Mike"
@@ -171,13 +172,13 @@ def plot_distributions_over_actions():
 def get_question(intent, actions, scores):
     actions_and_scores = '\n'.join([f"{i}) probability: {scores[i]}, action: {actions[i]}" for i in range(len(actions))])
     messages=[
-                {"role": "system", "content": "Your job is to generate a clarifying question which will disambiguate mapping from users intent or query onto a set of actions. You will be provided with the intent, set of actions, and associated probabuility scores of how well each action matches the intent. The goal is to create such claryfing question, answer to which would minimise the entropy of the provided probability distribution of the set of actions with the ultimate goal of identyfing a single action that matches the intent."},
-                {"role": "user", "content":f"User's intent: {intent}\n" +
-                 f"{actions_and_scores}\n" +
-                 f"Given the above user's intent and actions with associated probabilities, what claryfing question to the author of the intent will help minimise the entropy over the actions the system coudl take by the biggest amount? Remember hyou are trying to disambiguate the mapping from intent to a single action. Output just the question:"}
+                {"role": "system", "content": "User submits a request and want to choose an action out of a set of available options. No other actions are available, just the ones provided. It is however not clear, which of the actions will fulfil user's request best. Your job is to look at the request and set of actions and figure out a clarifying question which will provide a new piece of information, that would clarify which action would fulfil user's request. You will be provided with the intent, set of actions, and associated probability scores of how well each action matches the intent. The goal is to create such claryfing question, answer to which would minimise the entropy of the provided probability distribution of the set of actions with the ultimate goal of identyfing a single action that matches the intent."},
+                {"role": "user", "content":f"My request: {intent}\n" +
+                 f"Available actions:\n{actions_and_scores}\n" +
+                 f"Given the above user's request and the set of actions with associated probabilities, what claryfing question to the user would help minimise the entropy over the actions by the biggest amount? Remember your are trying to disambiguate the mapping from the request to a single action. Output just the question:"}
             ]
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=openai_model,
         messages=messages
     )
     output = response.choices[0].message.content
@@ -190,13 +191,14 @@ def entropy_threshold_eval(intent, actions, scores):
     Ideally there should be some entropy eval system that uses the computed probabilities without having to call LLM. '''
     actions_and_scores = '\n'.join([f"{i}) probability: {scores[i]}, action: {actions[i]}" for i in range(len(actions))])
     messages=[
-                {"role": "system", "content": "Your job is to evaluate whether the mapping from users query/intent to a set of actions is ambigious and needs further clarfyfication OR if there is a clear winner in terms of which action user want to perform from the set of options. You will be provided with the intent, set of actions, and associated probabuility scores of how well each action matches the intent. If you believe the entropy of this probability distribution is low enough then we don;t need anymore claryfication, if the entropy is high then we do."},
-                {"role": "user", "content":f"User's intent: {intent}\n" +
-                 f"{actions_and_scores}\n" +
-                 f"Given the above user's intent and actions with associated probabilities. Is the entropy low enough to select the right action with high confidence, if yes answer TRUE or otherwise if there is still an ambiguity and more clarity is needed answer FALSE.\n Answer only TRUE or FALSE, nothing else:"}
+                {"role": "system", "content": "User provided a request and wants to perform one of the actions they listed. Your job is to evaluate whether there is a clear option among the actions that fulfiles user's intent OR whether you need to ask a claryfing question to disambiguate the mapping (i.e. because there are two or more likely options, that could fulfil the request). The match between request and a single action needs to be clear, if there are more then one action which could satisfy the request then a claryfing question is needed"},
+                #  You will be provided with the intent, set of actions, and associated probabuility scores of how well each action matches the intent. If you believe the entropy of this probability distribution is low enough then we don;t need anymore claryfication, if the entropy is high then we do."},
+                {"role": "user", "content":f"My request: {intent}\n" +
+                 f"Available actions:\n{actions_and_scores}\n" +
+                 f"Given the above user's request and the set of actions with associated probabilities. Is the entropy low enough to tell which one specifc action would fulfil user's request? If yes answer TRUE or otherwise if there is still an ambiguity and more clarity is needed answer FALSE.\n Answer only TRUE or FALSE, nothing else:"}
             ]
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model=openai_model,
         messages=messages
     )
     output = response.choices[0].message.content
@@ -206,6 +208,25 @@ def entropy_threshold_eval(intent, actions, scores):
     if "true" in output.lower():
         stop_chain = True
     return stop_chain
+
+
+def transform_users_intent(intent, question, answer):
+    messages=[
+                {"role": "system", "content": "User provided their request. Then we asked them a claryfing question and they provided an answer. Your job is to augument the original request with the answer, to make it seem like user provided that additional information in their original request."},
+                {"role": "user", "content": f"""Here is my original request: {intent}
+                Here is the follow up question you asked: {question}
+                Here is my answer: {answer}
+
+                Can you integrate my answer into my original request which would make the claryfing question redundant?
+                Output just the modified original request. New original request:"""}
+            ]
+    response = client.chat.completions.create(
+        model=openai_model,
+        messages=messages
+    )
+    output = response.choices[0].message.content
+    logging.debug(f"\transform_users_intent prompt:\n {messages}\n Response: {output}\n ")
+    return output
 
 
 if "__main__" == __name__:
@@ -229,11 +250,10 @@ if "__main__" == __name__:
             break
 
         # 2) transform original users intent
-        
+        intent = transform_users_intent(intent, question, answer)
+        print(f'New intent: {intent}')
 
         # 2) determine level of ambiguity 
-        intent = f"{intent}\nQuestion: {question}\nAnswer: {answer}"
-        print(f'intent: {intent}')
         scores = get_similarity_scores(intent, actions, mean, std_dev)
         normalised_scores = normalise_scores(scores)
         print(f'normalised_scores: {normalised_scores}\n')
