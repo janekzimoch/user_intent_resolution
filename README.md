@@ -25,6 +25,10 @@ Assumptions:
 
 descriptiuon to be added
 
+## 3. Claryfing question
+
+descriptiuon to be added
+
 ## 4. Update user prompt
 
 This is best done with a simple LLM prompt
@@ -37,10 +41,6 @@ Here is my answer: {answer}
 Can you integrate my answer into my original request which would make the claryfing question unnecesary?
 Output just the modified original request. New original request:
 ```
-
-## 3. Claryfing question
-
-descriptiuon to be added
 
 ## Example
 
