@@ -10,6 +10,15 @@ In the following sections, we will introduce and explore ideas on how each of th
 
 ![schematic of system structure](./images/schematic_of_system_structure.png)
 
+## Motivation
+
+> Why not just perform a single step LLM prompt, where both intent and actions are added to the prompt context?
+
+- This may work with 100 or 1000 actions, but what when we have +10,000 actions or +100,000 actions? Will LLM be aware about all ambiguities between intent and the set of actions? Can we trust that the structure for modelling probability of mapping `intent -> action` will happen implicitly?
+- How much trust do we have in LLMs performance? Can we introduce enough inductive bias about selection process into the prompt to warrant enough clarifyign questions to achieve X% confidence that the final proposed action is the right match for users intent?
+- What when the set of actions is not an unstructured list, but comes as a tree or a graph? (i.e. DOM of a website). Should we flatten the tree for inference with LLM? or conduct action inference at every page of the DOM tree? Wouldn't search through the tree be more optimal?
+- Cost. Searching a datastructure of embeddings with a cheap embedding model is almost free, while cost of LLM inference scales linearly with number of actions in the set.
+
 ## 1. Probability distribution over N actions
 
 Number of actions `N` is unknown aprioriy for a general system. Thus a solution needs to be able to accomodate varying `N`number (a simple classification over N actions with calibrated logits deosn't satisfy this requirement). A potential solution could involve a contrastive learning (or metric learning) between `intent` and `action` where the labels are generated in a binary fashion `can this intent be fulfiled with a given action?`. In principle, the more suitable the action, the smaller the cosine distance between its embedding and that of the user's prompt. Out of the shelf embedding models, trained to generate semantic latent representation of language, can be used as well, however this will be limited by the amount of noise introduced by semantic similarities between words and sentences, which is not equivalent to the original question `can this action fulfil user's request?`. Contrastive learning where we evaluate score for one action at a time has also the limitation that it misses out on the information of the context of other avialbale actions in the set - we believe this will only have a minor effect.
