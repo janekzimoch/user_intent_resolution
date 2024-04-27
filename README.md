@@ -21,7 +21,7 @@ In the following sections, we will introduce and explore ideas on how each of th
 
 ## 1. Probability distribution over N actions
 
-Number of actions `N` is unknown aprioriy for a general system. Thus a solution needs to be able to accomodate varying `N`number (a simple classification over N actions with calibrated logits deosn't satisfy this requirement). A potential solution could involve a contrastive learning (or metric learning) between `intent` and `action` where the labels are generated in a binary fashion `can this intent be fulfiled with a given action?`. In principle, the more suitable the action, the smaller the cosine distance between its embedding and that of the user's prompt. Out of the shelf embedding models, trained to generate semantic latent representation of language, can be used as well, however this will be limited by the amount of noise introduced by semantic similarities between words and sentences, which is not equivalent to the original question `can this action fulfil user's request?`. Contrastive learning where we evaluate score for one action at a time has also the limitation that it misses out on the information of the context of other avialbale actions in the set - we believe this will only have a minor effect.
+Number of actions `N` is unknown apriori for a general system. Thus a solution needs to be able to accomodate varying `N`number (a simple classification over N actions with calibrated logits deosn't satisfy this requirement). A potential solution could involve a contrastive learning (or metric learning) between `intent` and `action` where the labels are generated in a binary fashion `can this intent be fulfiled with a given action?`. In principle, the more suitable the action, the smaller the cosine distance between its embedding and that of the user's prompt. Out of the shelf embedding models, trained to generate semantic latent representation of language, can be used as well, however this will be limited by the amount of noise introduced by semantic similarities between words and sentences, which is not equivalent to the original question `can this action fulfil user's request?`. Contrastive learning where we evaluate score for one action at a time has also the limitation that it misses out on the information of the context of other avialbale actions in the set - we believe this will only have a minor effect.
 
 ![schematic of probability distribtuion over N actions](./images/schematic_probability_distribution_over_N_actions.png)
 
@@ -32,10 +32,22 @@ Assumptions:
 
 ## 2. Is the intent -> action mapping clear?
 
-descriptiuon to be added
+Given a probability distribution over a set of actions, we want to take a binary decision as to whether to take an action or ask a claryfing question. If we perform the most likely action, the expected error rate will be `1 - max( p(action|intent) )` - so the answer to our binary question is then a matter of our sensitivity to the error rate, a hyperparameter. Thsi hyperparameter governs the tradeoff between accuracy and the number of claryfing questions represented by the figure below.
+
+![Accuracy vs. number fo claryfing questions](./images/number_of_questions_to_answer.png)
+
+If we select a single hyperparameter probability threshold `thr` for `max( p(action|intent) )` there are a few points worth keeping in mind:
+
+- The longer the list of actions, the more loop steps (claryfing questions) it will take to achieve `thr`
+- Is `max( p(action|intent) )` a good metric to guide the binary decision? Should we use entropy instead?
+  - `max( p(action|intent) )` makes sense because we care about selecting the most likely answer.
+  - if `thr` is sufficiently high i.e. `> 0.8` as opposed to `> 0.5` we don't need to worry about two actions having high probability, as `thr >> 0.5` ensures that the best second action has probability `<< 0.5` (where `<<` means _much_ lower than).
+
+The above, however, requires the model that generates the probability distribution from the first step to actually model the question `Can this action fulfil the intent?`. However this may not be fully possible (i.e. if we don't train specifically for this task).
 
 ## 3. Claryfing question
 
+When asking a claryfing question, what question should we ask?
 descriptiuon to be added
 
 ## 4. Update user prompt
