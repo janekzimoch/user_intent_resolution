@@ -47,8 +47,16 @@ The above, however, requires the model that generates the probability distributi
 
 ## 3. Claryfing question
 
-When asking a claryfing question, what question should we ask?
-descriptiuon to be added
+When asking a claryfing question, what question should we ask? Since the objective is to find `argmax_i( p(action|intent) )` where `thr < p(action_i|intent)` in as few steps as possible, the claryfing question should aim to achieve this objective. To achieve this, we can aim to mnimise `entropy` of a distribution[^1]. How can we achieve this?
+
+We could provide a set of actions and the user's intent to an LLM and prompt it to select the right claryfing question. When listing actions in prompt's context, we could provide our computed probabilities to explicitly point to the LLM where the ambiguity lies (and thus simplify the task for the LLM, without requiring it to implicitly model the entropy). This approach however, requires us to enter all actions into the context of a prompt, which doesn't allign with the motivations we stated in the motivation section at the begining of this document.
+
+Alternative options:
+
+- we could filter only top `K` actions, with the highest probability, and ask LLM to provide a claryfing question to disambiguate only those.
+- we could itterate over the set of actions and remove those which clearly don't apply as they contradict the intent or don't fulfil some requirements already expliclty mentioned. These would leave us with only plausible options which we still can't discriminate from.
+
+[^1]: I am still not 100% clear on this, but mnimising entropy is not the same as trying to maximise `max( p(action | intent) )`. In the former we try to minimise probability of irrelevant actions and maxmise probability of relevant action, while in the later, we only try to maximise probability of the relevant action, which doesn't require us disambiguating actions with lower probability. Although, they seem pretty much related so it doesn;t seem like an important question to delve upon.
 
 ## 4. Update user prompt
 
@@ -63,9 +71,9 @@ Can you integrate my answer into my original request which would make the claryf
 Output just the modified original request. New original request:
 ```
 
-## Example
+## An example of the system
 
-#### Users intent and set of actions
+#### 0. Users intent and set of actions
 
 ```
 intent = "I want to contact Mike"
