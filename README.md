@@ -4,10 +4,10 @@ Note: Current implementation in the `main.py` involves the simples solution to e
 
 ## TODO:
 
-[ ] Identify benchmark dataset (i.e. set of user queries that map on to a set of actions, with some baseline odels for performance comparison)
-[ ] Identify training dataset for "Probability distribution over N actions" (could be the same as benchmark dataset)
+- [ ] Identify benchmark dataset (i.e. set of user queries that map on to a set of actions, with some baseline odels for performance comparison)
+- [ ] Identify training dataset for "Probability distribution over N actions" (could be the same as benchmark dataset)
 
-Ask: If you know any banchmark datasets, please get in touch 🙏. Alternatively, if you know some papers / github repos / keywords related to this project, please share them too. 
+**Ask:** If you know any banchmark datasets, please get in touch 🙏. Alternatively, if you know some papers / github repos / keywords related to this project, please share them too. 
 
 ## Objective
 
