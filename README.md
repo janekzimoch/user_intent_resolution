@@ -2,6 +2,13 @@
 
 Note: Current implementation in the `main.py` involves the simples solution to each module below i could think of. The solution i envisioned consists of more complex modules and I will be updating them itteratively.
 
+## TODO:
+
+[ ] Identify benchmark dataset (i.e. set of user queries that map on to a set of actions, with some baseline odels for performance comparison)
+[ ] Identify training dataset for "Probability distribution over N actions" (could be the same as benchmark dataset)
+
+Ask: If you know any banchmark datasets, please get in touch 🙏. Alternatively, if you know some papers / github repos / keywords related to this project, please share them too. 
+
 ## Objective
 
 Given a prompt to an AI agent, "Can you contact Mike?" the action the agent should take—"contact via email" or "contact via WhatsApp"—is unclear. Such a user prompt contains an insufficient amount of information to allow system to discriminate between these two actions, resulting in ambiguity. To achieve a high level of accuracy, the machine needs to seek additional information before making a decision. Asking the user for clarification is a clear and often the best way to reduce this uncertainty. The figure below provides a general schematic of how this can be achieved. It takes the form of a clarification loop, where the performance objective is to disambiguate the mapping from user intent to a single action in as few loop iterations as possible (following the belief that fewer steps mean a lower cognitive load and thus a better user experience).
